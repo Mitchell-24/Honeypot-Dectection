@@ -49,7 +49,7 @@ def test(address):
     my_client.start()
 
     counter = 0
-    while not cl_connection_1.is_connected and counter < 5:
+    while not cl_connection_1.is_connected and counter < 2:
         #print("CL] Waiting for connection to {0}:{1}".format(cl_connection_1.ip, cl_connection_1.port))
         time.sleep(1)
         counter += 1

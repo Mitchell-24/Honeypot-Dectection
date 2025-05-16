@@ -2,7 +2,7 @@ import socket
 
 import conpot_S7
 import conpot_iec104
-
+import conpot_ipmi
 
 class HoneypotDetector:
 
@@ -17,6 +17,7 @@ class HoneypotDetector:
         # then we would need to check specifically per honeypot.
         self.S7_port_open = False
         self.IEC104_port_open = False
+        self.IPMI_port_open = False
 
         self.check_ports()
 
@@ -27,6 +28,7 @@ class HoneypotDetector:
         print("Checking the host for open ports...")
         self.S7_port_open = self.test_port_open(102, "S7")
         self.IEC104_port_open = self.test_port_open(2404, "IEC104")
+        self.IPMI_port_open = self.test_port_open(623, "IPMI")
 
     def test_port_open(self, port, protocol):
         """
@@ -36,6 +38,10 @@ class HoneypotDetector:
         :return: True if the port is open, False otherwise.
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        if protocol == "IPMI":
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
         result = s.connect_ex((self.host_address, port))
         s.close()
         if result == 0:
@@ -60,10 +66,17 @@ class HoneypotDetector:
         else: IEC104 = False
         print("Found IEC104 signature.") if IEC104 else None
 
+        if self.IPMI_port_open:
+            try: IPMI = conpot_ipmi.test(self.host_address)
+            except: IPMI = False
+        else: IPMI = False
+        print("Found IPMI signature.") if IPMI else None
+
+
         # ATG = TODO
         # print("Found ATG signature.") if ATG else None
 
-        if S7 or IEC104:
+        if S7 or IEC104 or IPMI:
             print("The host is definitely a Conpot instance.")
         # else if ATG:
         #     print("The host could be a Conpot instance.")
