@@ -2,6 +2,7 @@ import socket
 
 import conpot_S7
 import conpot_iec104
+import conpot_modbus
 
 
 class HoneypotDetector:
@@ -17,7 +18,7 @@ class HoneypotDetector:
         # then we would need to check specifically per honeypot.
         self.S7_port_open = False
         self.IEC104_port_open = False
-
+        self.Modbus_port_open = False
         self.check_ports()
 
     def check_ports(self):
@@ -27,6 +28,7 @@ class HoneypotDetector:
         print("Checking the host for open ports...")
         self.S7_port_open = self.test_port_open(102, "S7")
         self.IEC104_port_open = self.test_port_open(2404, "IEC104")
+        self.Modbus_port_open = self.test_port_open(502, "Modbus")
 
     def test_port_open(self, port, protocol):
         """
@@ -60,10 +62,16 @@ class HoneypotDetector:
         else: IEC104 = False
         print("Found IEC104 signature.") if IEC104 else None
 
+        if self.Modbus_port_open:
+            try: Modbus = conpot_modbus.test(self.host_address)
+            except: Modbus = False
+        else: Modbus = False
+        print("Found Modbus signature.") if Modbus else None
+
         # ATG = TODO
         # print("Found ATG signature.") if ATG else None
 
-        if S7 or IEC104:
+        if S7 or IEC104 or Modbus:
             print("The host is definitely a Conpot instance.")
         # else if ATG:
         #     print("The host could be a Conpot instance.")
