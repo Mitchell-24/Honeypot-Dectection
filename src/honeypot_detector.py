@@ -42,6 +42,7 @@ class HoneypotDetector:
         if protocol == "IPMI":
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        s.settimeout(3)
         result = s.connect_ex((self.host_address, port))
         s.close()
         if result == 0:
