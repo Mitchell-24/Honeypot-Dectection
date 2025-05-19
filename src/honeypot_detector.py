@@ -3,6 +3,7 @@ import socket
 import conpot_S7
 import conpot_iec104
 import conpot_ipmi
+import conpot_modbus
 
 class HoneypotDetector:
 
@@ -14,7 +15,6 @@ class HoneypotDetector:
         self.host_address = host_address
         self.open_ports = {}
         self.checked_ports = False
-
 
     def scan_all_ports(self):
         """
@@ -45,15 +45,17 @@ class HoneypotDetector:
         else:
             print("The host has " + str(count) + " ports open. Based on this, it is unlikely that the host is a honeypot")
         self.checked_ports = True
-
+        
     def check_ports(self):
         """
         Checks which ports ICS the host has open.
         """
         print("Checking the host for open ports...")
+
         self.open_ports["TCP-102"] = self.test_TCP_port_open(102, "S7")
         self.open_ports["TCP-2404"] = self.test_TCP_port_open(2404, "IEC104")
         self.open_ports["UDP-623"] = self.test_UDP_port_open(623, "IPMI")
+        self.open_ports["TCP-502"] = self.test_TCP_port_open(502, "Modbus")
         self.checked_ports = True
 
     def test_TCP_port_open(self, port, protocol):
@@ -119,11 +121,17 @@ class HoneypotDetector:
         else: IPMI = False
         print("Found IPMI signature.") if IPMI else None
 
+        if self.open_ports["TCP-502"]:
+            try: modbus = conpot_modbus.test(self.host_address)
+            except: modbus = False
+        else: modbus = False
+        print("Found Modbus signature.") if modbus else None
 
         # ATG = TODO
         # print("Found ATG signature.") if ATG else None
 
-        if S7 or IEC104 or IPMI:
+
+        if S7 or IEC104 or IPMI or modbus:
             print("The host is definitely a Conpot instance.")
         # else if ATG:
         #     print("The host could be a Conpot instance.")
