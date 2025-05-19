@@ -1,7 +1,10 @@
 import honeypot_detector
+import sys
 
-print("Please enter the IP address of the target host: ")
-ip_address = input()
+if len(sys.argv) < 2:
+    print("Please provide the address of the host as an argument.")
+    sys.exit(1)
+ip_address = sys.argv[1]
 
 
 detector = honeypot_detector.HoneypotDetector(ip_address)
