@@ -7,6 +7,7 @@ port = 502
 def test(address):
     try: 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(5)
         s.connect((address, port))
         s.sendall(frame)
         data = s.recv(1024)

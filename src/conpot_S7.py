@@ -10,7 +10,7 @@ def test(address):
     """
     port = 102
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.timeout(5)
+    s.settimeout(5)
     s.connect((address, port))
 
     # Handshake part 1
