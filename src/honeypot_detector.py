@@ -31,6 +31,8 @@ class HoneypotDetector:
                 TCP_protocol = "IEC104"
             elif i == 623:
                 UDP_protocol = "IPMI"
+            elif i == 502:
+                TCP_protocol = "Modbus"
             self.open_ports["TCP-" + str(i)] = self.test_TCP_port_open(i, TCP_protocol)
             self.open_ports["UDP-" + str(i)] = self.test_UDP_port_open(i, UDP_protocol)
         count = 0
@@ -50,7 +52,7 @@ class HoneypotDetector:
         """
         Checks which ports ICS the host has open.
         """
-        print("Checking the host for open ports...")
+        print("Checking the host for open ICS ports...")
 
         self.open_ports["TCP-102"] = self.test_TCP_port_open(102, "S7")
         self.open_ports["TCP-2404"] = self.test_TCP_port_open(2404, "IEC104")
