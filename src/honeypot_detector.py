@@ -1,6 +1,7 @@
 import socket
 
 import conpot_S7
+import conpot_bacnet
 import conpot_iec104
 import conpot_ipmi
 import conpot_modbus
@@ -34,6 +35,8 @@ class HoneypotDetector:
                 UDP_protocol = "IPMI"
             elif i == 502:
                 TCP_protocol = "Modbus"
+            elif i == 47808:
+                UDP_protocol = "Bacnet"
             elif i == 10001:
                 TCP_protocol = "Gaspot"
             self.open_ports["TCP-" + str(i)] = self.test_TCP_port_open(i, TCP_protocol)
@@ -140,6 +143,12 @@ class HoneypotDetector:
         else: gaspot = False
         print("Found Gaspot signature.") if gaspot else None
 
+
+        if self.open_ports["UDP-47808"]:
+            try: bacnet = conpot_bacnet.test(self.host_address)
+            except: bacnet = False
+        else: bacnet = False
+        print("Found Bacnet signature.") if bacnet else None
 
         if S7 or IEC104 or IPMI or modbus:
             print("The host is definitely a Conpot instance.")
