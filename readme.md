@@ -29,6 +29,9 @@ plant_id="Mouser Factory" (found by censys):
 - 94.131.107.115 (vm3903957.stark-industries.solutions)
 - 141.144.201.128
 
+*running Bacnet*
+- 185.177.125.34 
+
 ### Suspected real hosts:
 
 *running S7*
@@ -57,7 +60,12 @@ plant_id="Mouser Factory" (found by censys):
 *running ATG*
 - 68.34.86.183
 - 98.0.169.30 (syn-098-000-169-030.biz.spectrum.com)
-- 218.60.50.160 
+- 218.60.50.160
+
+*running Bacnet*
+- 84.31.197.242 
+- 77.62.188.115
+- 77.62.162.78
 
 ## Requirements
 
