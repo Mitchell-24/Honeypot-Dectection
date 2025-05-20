@@ -54,6 +54,11 @@ plant_id="Mouser Factory" (found by censys):
 - 149.143.15.30 (149-143-15-30-static.ngblunetworks.nl) 
 - 113.212.72.100 (static.ritesim.com) 
 
+*running ATG*
+- 68.34.86.183
+- 98.0.169.30 (syn-098-000-169-030.biz.spectrum.com)
+- 218.60.50.160 
+
 ## Requirements
 
 - Python 3

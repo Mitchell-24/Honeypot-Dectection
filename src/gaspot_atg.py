@@ -2,7 +2,7 @@ import socket
 import time
 
 PORT = 10001
-TIMEOUT = 10
+TIMEOUT = 30
 
 
 KNOWN_COMMANDS = [
@@ -29,11 +29,25 @@ SIGNATURE_PATTERNS = [
     b'Serial'           
 ]
 
+def receive_full_response(sock):
+    """Reads all available response data until socket timeout occurs."""
+    sock.settimeout(1)
+    chunks = []
+    try:
+        while True:
+            chunk = sock.recv(1024)
+            if not chunk:
+                continue
+            chunks.append(chunk)
+    except socket.timeout:
+        pass 
+    return b''.join(chunks)
+
 def test(address):
     """
-    Tests if the host at given address behaves like a GasPot honeypot.
+    Tests whether the given host behaves like a GasPot honeypot.
     :param address: IP or hostname
-    :return: True if GasPot signatures are detected, False otherwise
+    :return: True if signature found, False otherwise
     """
     try:
         s = socket.socket()
@@ -46,28 +60,27 @@ def test(address):
         responses = []
 
         for cmd in all_commands:
+            print(f"[*] Sending command: {cmd}")
             s.send(cmd)
-            time.sleep(0.1)  
-            try:
-                data = s.recv(4096)
-                responses.append((cmd, data))
+            time.sleep(0.05)  
+            data = receive_full_response(s)
+            responses.append((cmd, data))
 
 
-                if any(sig in data for sig in SIGNATURE_PATTERNS):
-                    matched_signatures += 1
+            if any(sig in data for sig in SIGNATURE_PATTERNS):
+                matched_signatures += 1
 
-            except socket.timeout:
-                responses.append((cmd, b'[No Response - Timeout]'))
+            time.sleep(0.1)
 
         s.close()
 
         print(f"\n[✓] Completed scan. Matched signatures: {matched_signatures}")
         for cmd, resp in responses:
             clean_resp = resp.decode("utf-8", errors="ignore").replace("\n", "\\n")
-            print(f"↪ Command: {cmd} → Response: {clean_resp[:100]}")
+            print(f"↪ Command: {cmd} → Response: {clean_resp[:50]}")
 
         return matched_signatures > 0
 
     except Exception as e:
-        print(f"[!] Connection error: {e}")
+        print(f"[!] Error: {e}")
         return False
