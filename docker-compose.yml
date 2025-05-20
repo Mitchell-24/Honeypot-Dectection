@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   conpot:
-    build: ./
+    image: yamchah2/conpot:bacnet_fix
     ports:
       - "80:8800" #SCADA UI, http
       - "102:10201" #S7Comm
