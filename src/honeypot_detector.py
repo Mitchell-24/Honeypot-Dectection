@@ -5,6 +5,7 @@ import conpot_bacnet
 import conpot_iec104
 import conpot_ipmi
 import conpot_modbus
+import gaspot_atg
 
 class HoneypotDetector:
 
@@ -36,6 +37,8 @@ class HoneypotDetector:
                 TCP_protocol = "Modbus"
             elif i == 47808:
                 UDP_protocol = "Bacnet"
+            elif i == 10001:
+                TCP_protocol = "Gaspot"
             self.open_ports["TCP-" + str(i)] = self.test_TCP_port_open(i, TCP_protocol)
             self.open_ports["UDP-" + str(i)] = self.test_UDP_port_open(i, UDP_protocol)
         count = 0
@@ -61,6 +64,7 @@ class HoneypotDetector:
         self.open_ports["TCP-2404"] = self.test_TCP_port_open(2404, "IEC104")
         self.open_ports["UDP-623"] = self.test_UDP_port_open(623, "IPMI")
         self.open_ports["TCP-502"] = self.test_TCP_port_open(502, "Modbus")
+        self.open_ports["TCP-10001"] = self.test_TCP_port_open(10001, "Gaspot")
         self.checked_ports = True
 
     def test_TCP_port_open(self, port, protocol):
@@ -133,7 +137,11 @@ class HoneypotDetector:
         print("Found Modbus signature.") if modbus else None
 
         # ATG = TODO
-        # print("Found ATG signature.") if ATG else None
+        if self.open_ports["TCP-10001"]:
+            try: gaspot = gaspot_atg.test(self.host_address)
+            except: gaspot = False
+        else: gaspot = False
+        print("Found Gaspot signature.") if gaspot else None
 
 
         if self.open_ports["UDP-47808"]:
