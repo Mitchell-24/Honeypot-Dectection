@@ -65,6 +65,7 @@ class HoneypotDetector:
         self.open_ports["UDP-623"] = self.test_UDP_port_open(623, "IPMI")
         self.open_ports["TCP-502"] = self.test_TCP_port_open(502, "Modbus")
         self.open_ports["TCP-10001"] = self.test_TCP_port_open(10001, "Gaspot")
+        self.open_ports["UDP-47808"] = self.test_UDP_port_open(47808, "Bacnet")
         self.checked_ports = True
 
     def test_TCP_port_open(self, port, protocol):
