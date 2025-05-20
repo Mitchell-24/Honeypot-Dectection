@@ -112,45 +112,44 @@ class HoneypotDetector:
             self.check_ports()
         print("\nTesting if the host is a Conpot instance...")
 
-        if self.open_ports["TCP-102"]:
+        if "TCP-102" in self.open_ports:
             try: S7 = conpot_S7.test(self.host_address)
             except: S7 = False
         else: S7 = False
         print("Found S7 signature.") if S7 else None
 
-        if self.open_ports["TCP-2404"]:
+        if "TCP-2404" in self.open_ports:
             try: IEC104 = conpot_iec104.test(self.host_address)
             except: IEC104 = False
         else: IEC104 = False
         print("Found IEC104 signature.") if IEC104 else None
 
-        if self.open_ports["UDP-623"]:
+        if "UDP-623" in self.open_ports:
             try: IPMI = conpot_ipmi.test(self.host_address)
             except: IPMI = False
         else: IPMI = False
         print("Found IPMI signature.") if IPMI else None
 
-        if self.open_ports["TCP-502"]:
+        if "TCP-502" in self.open_ports:
             try: modbus = conpot_modbus.test(self.host_address)
             except: modbus = False
         else: modbus = False
         print("Found Modbus signature.") if modbus else None
 
-        # ATG = TODO
-        if self.open_ports["TCP-10001"]:
+        if "TCP-10001" in self.open_ports:
             try: gaspot = gaspot_atg.test(self.host_address)
             except: gaspot = False
         else: gaspot = False
         print("Found Gaspot signature.") if gaspot else None
 
 
-        if self.open_ports["UDP-47808"]:
+        if "UDP-47808" in self.open_ports:
             try: bacnet = conpot_bacnet.test(self.host_address)
             except: bacnet = False
         else: bacnet = False
         print("Found Bacnet signature.") if bacnet else None
 
-        if S7 or IEC104 or IPMI or modbus:
+        if S7 or IEC104 or IPMI or modbus or gaspot or bacnet:
             print("The host is definitely a Conpot instance.")
         # else if ATG:
         #     print("The host could be a Conpot instance.")

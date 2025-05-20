@@ -8,5 +8,5 @@ ip_address = sys.argv[1]
 
 
 detector = honeypot_detector.HoneypotDetector(ip_address)
-detector.scan_all_ports()
+#detector.scan_all_ports()
 detector.test_conpot()
