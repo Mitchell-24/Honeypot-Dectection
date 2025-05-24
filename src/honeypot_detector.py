@@ -6,6 +6,7 @@ import conpot_iec104
 import conpot_ipmi
 import conpot_modbus
 import gaspot_atg
+import dnp3pot_dnp3
 
 class HoneypotDetector:
 
@@ -39,6 +40,8 @@ class HoneypotDetector:
                 UDP_protocol = "Bacnet"
             elif i == 10001:
                 TCP_protocol = "Gaspot"
+            elif i == 20000:
+                TCP_protocol = "DNP3"
             self.open_ports["TCP-" + str(i)] = self.test_TCP_port_open(i, TCP_protocol)
             self.open_ports["UDP-" + str(i)] = self.test_UDP_port_open(i, UDP_protocol)
         count = 0
@@ -66,6 +69,7 @@ class HoneypotDetector:
         self.open_ports["TCP-502"] = self.test_TCP_port_open(502, "Modbus")
         self.open_ports["TCP-10001"] = self.test_TCP_port_open(10001, "Gaspot")
         self.open_ports["UDP-47808"] = self.test_UDP_port_open(47808, "Bacnet")
+        self.open_ports["TCP-20000"] = self.test_TCP_port_open(20000, "DNP3")
         self.checked_ports = True
 
     def test_TCP_port_open(self, port, protocol):
@@ -143,15 +147,23 @@ class HoneypotDetector:
         else: gaspot = False
         print("Found Gaspot signature.") if gaspot else None
 
-
         if "UDP-47808" in self.open_ports:
             try: bacnet = conpot_bacnet.test(self.host_address)
             except: bacnet = False
         else: bacnet = False
         print("Found Bacnet signature.") if bacnet else None
 
+        print("\nTesting if the host is a DNP3pot instance...")
+
+        if "TCP-20000" in self.open_ports:
+            try: dnp3pot = dnp3pot_dnp3.test(self.host_address)
+            except: dnp3pot = False
+        else: dnp3pot = False
+        print("Found DNP3 signature.") if dnp3pot else None
         if S7 or IEC104 or IPMI or modbus or gaspot or bacnet:
             print("The host is definitely a Conpot instance.")
+        elif dnp3pot:
+            print("The host is a DNP3pot instance.")
         # else if ATG:
         #     print("The host could be a Conpot instance.")
         else:

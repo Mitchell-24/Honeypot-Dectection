@@ -21,4 +21,10 @@ services:
     ports:
       - "10001:10001"
 
+  dnp3pot:
+    image: andreamalnatitu/dn3pot:latest
+    container_name: dnp3pot
+    ports:
+      - "20000:20000"
+
   
