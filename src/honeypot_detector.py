@@ -201,13 +201,6 @@ class HoneypotDetector:
         else: modbus = False
         print("Found Modbus signature.") if modbus else None
 
-        if "TCP-10001" in self.open_ports:
-            try: gaspot = gaspot_atg.test(self.host_address)
-            except: gaspot = False
-        else: gaspot = False
-        print("Found Gaspot signature.") if gaspot else None
-
-
         if "UDP-47808" in self.open_ports:
             try: bacnet = conpot_bacnet.test(self.host_address)
             except: bacnet = False
@@ -216,7 +209,24 @@ class HoneypotDetector:
 
         if S7 or IEC104 or IPMI or modbus or gaspot or bacnet:
             print("The host is definitely a Conpot instance.")
-        # else if ATG:
-        #     print("The host could be a Conpot instance.")
         else:
             print("Unlikely that the host is a Conpot instance.")
+    
+    def test_gaspot(self):
+        """
+        Determines if the host is running Gaspot based on which signatures can be elicited.
+        """
+
+        print("\nTesting if the host is a Gaspot instance...")
+
+        if "TCP-10001" in self.open_ports:
+            try: gaspot = gaspot_atg.test(self.host_address)
+            except: gaspot = False
+        else: gaspot = False
+
+        print("Found Gaspot signature.") if gaspot else None
+
+        if gaspot:
+            print("The host is definitely a Gaspot instance.")
+        else:
+            print("Unlikely that the host is a Gaspot instance.")
