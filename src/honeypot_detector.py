@@ -8,6 +8,7 @@ import conpot_ipmi
 import conpot_modbus
 import gaspot_atg
 import os
+import dnp3pot_dnp3
 
 class HoneypotDetector:
 
@@ -230,12 +231,20 @@ class HoneypotDetector:
         else: modbus = False
         print("Found Modbus signature.") if modbus else None
 
+
         if "UDP-47808" in self.open_ports:
             try: bacnet = conpot_bacnet.test(self.host_address)
             except: bacnet = False
         else: bacnet = False
         print("Found Bacnet signature.") if bacnet else None
 
+        print("\nTesting if the host is a DNP3pot instance...")
+
+        if "TCP-20000" in self.open_ports:
+            try: dnp3pot = dnp3pot_dnp3.test(self.host_address)
+            except: dnp3pot = False
+        else: dnp3pot = False
+        print("Found DNP3 signature.") if dnp3pot else None
         if S7 or IEC104 or IPMI or modbus or gaspot or bacnet:
             print("The host is definitely a Conpot instance.")
         else:
