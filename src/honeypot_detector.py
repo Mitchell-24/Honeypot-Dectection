@@ -1,12 +1,13 @@
 import socket
 from subprocess import run
-
+import requests
 import conpot_S7
 import conpot_bacnet
 import conpot_iec104
 import conpot_ipmi
 import conpot_modbus
 import gaspot_atg
+import os
 import dnp3pot_dnp3
 
 class HoneypotDetector:
@@ -20,6 +21,30 @@ class HoneypotDetector:
         self.open_ports = {}
         self.checked_ports = False
 
+    def get_host_info(self):
+        """
+        Retrieves and displays information about the target host using IPInfo.io API.
+        Uses bearer token authentication if IPINFO_API_KEY environment variable is set.
+        """
+        api_key = os.getenv('IPINFO_API_KEY')
+        if not api_key:
+            print("Warning: IPINFO_API_KEY environment variable not found. API requests may be throttled.")
+            response = requests.get(f"https://ipinfo.io/{self.host_address}/json")
+        else:
+            headers = {'Authorization': f'Bearer {api_key}'}
+            response = requests.get(f"https://ipinfo.io/{self.host_address}/json", headers=headers)
+        data = response.json()
+        
+        print("\nTarget Host Information:")
+        if 'hostname' in data:
+            print(f"Hostname: {data['hostname']}")
+        print(f"City: {data.get('city', 'Unknown')}")
+        print(f"Region: {data.get('region', 'Unknown')}")
+        print(f"Country: {data.get('country', 'Unknown')}")
+        print(f"Organization: {data.get('org', 'Unknown')}")
+        print(f"Timezone: {data.get('timezone', 'Unknown')}\n")
+
+        return data
 
     def scan_ports(self, full_scan=False):
         """
@@ -27,6 +52,9 @@ class HoneypotDetector:
         If full scan is set to True, will scan all ports
          and print if the host is a honeypot based on the number of open ports.
         """
+        # Get information about the target host
+        self.get_host_info()
+
         udp_test = run("nmap -sU -p 1 localhost", shell=True, capture_output=True, timeout=120).stdout
         udp_privileged = len(udp_test) != 0
 
