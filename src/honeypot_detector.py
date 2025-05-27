@@ -1,4 +1,5 @@
 import socket
+from subprocess import run
 
 import conpot_S7
 import conpot_bacnet
@@ -19,102 +20,163 @@ class HoneypotDetector:
         self.open_ports = {}
         self.checked_ports = False
 
-    def scan_all_ports(self):
+
+    def scan_ports(self, full_scan=False):
         """
-        Scans all TCP + UDP ports on the host to check if they are open.
-        Prints the number of open ports and if this implies the host is a honeypot.
+        Scans TCP + UDP ports on the host to check if they are open.
+        If full scan is set to True, will scan all ports
+         and print if the host is a honeypot based on the number of open ports.
         """
-        print("Scanning all ports on the host...")
-        for i in range(1, 65535):
-            TCP_protocol = ""
-            UDP_protocol = ""
-            if i == 102:
-                TCP_protocol = "S7"
-            elif i == 2404:
-                TCP_protocol = "IEC104"
-            elif i == 623:
-                UDP_protocol = "IPMI"
-            elif i == 502:
-                TCP_protocol = "Modbus"
-            elif i == 47808:
-                UDP_protocol = "Bacnet"
-            elif i == 10001:
-                TCP_protocol = "Gaspot"
-            elif i == 20000:
-                TCP_protocol = "DNP3"
-            self.open_ports["TCP-" + str(i)] = self.test_TCP_port_open(i, TCP_protocol)
-            self.open_ports["UDP-" + str(i)] = self.test_UDP_port_open(i, UDP_protocol)
+        udp_test = run("nmap -sU -p 1 localhost", shell=True, capture_output=True, timeout=120).stdout
+        udp_privileged = len(udp_test) != 0
+
+        # Do a full port scan if required, otherwise only the ICS ports.
+        if full_scan:
+            self.full_TCP_scan()
+            if udp_privileged:
+                self.full_UDP_scan()
+            else:
+                print("Could not scan UDP ports. Please re-run with root permissions.")
+        else:
+            self.scan_only_ICS(udp_privileged)
+
+        # Count the number of open ports and print the ones that are found to be open.
         count = 0
         ports = self.open_ports.keys()
         for port in ports:
             if self.open_ports[port]:
                 count += 1
-        if count > 30:
-            print("The host has " + str(count) + " ports open. Based on this, it is likely that the host is a honeypot")
-        elif count > 10:
-            print("The host has " + str(count) + " ports open. Based on this, it is possible that the host is a honeypot")
-        else:
-            print("The host has " + str(count) + " ports open. Based on this, it is unlikely that the host is a honeypot")
-        self.checked_ports = True
-        
-    def check_ports(self):
-        """
-        Checks which ports ICS the host has open.
-        """
-        print("Checking the host for open ICS ports...")
+                is_ICS, name = self.is_ICS_port(port)
+                if is_ICS:
+                    print("Found open port " + port + ": " + name + " protocol.")
+                else:
+                    print("Found open port " + port)
 
-        self.open_ports["TCP-102"] = self.test_TCP_port_open(102, "S7")
-        self.open_ports["TCP-2404"] = self.test_TCP_port_open(2404, "IEC104")
-        self.open_ports["UDP-623"] = self.test_UDP_port_open(623, "IPMI")
-        self.open_ports["TCP-502"] = self.test_TCP_port_open(502, "Modbus")
-        self.open_ports["TCP-10001"] = self.test_TCP_port_open(10001, "Gaspot")
-        self.open_ports["UDP-47808"] = self.test_UDP_port_open(47808, "Bacnet")
-        self.open_ports["TCP-20000"] = self.test_TCP_port_open(20000, "DNP3")
-        self.checked_ports = True
-
-    def test_TCP_port_open(self, port, protocol):
-        """
-        Tests if the host has a TCP port open.
-        :param port: The TCP port to be tested
-        :param protocol: The protocol that usually uses the port.
-        :return: True if the port is open, False otherwise.
-        """
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        s.settimeout(3)
-        result = s.connect_ex((self.host_address, port))
-        s.close()
-        if result == 0:
-            if protocol != "":
-                print("Found TCP port " + str(port) + " open: " + protocol + " protocol.")
+        # Determine the likelihood of the host being a honeypot based on the open ports, only if we scanned all.
+        if full_scan:
+            if count > 30:
+                print("The host has " + str(count) + " ports open. Based on this, it is likely that the host is a honeypot")
+            elif count > 10:
+                print("The host has " + str(count) + " ports open. Based on this, it is possible that the host is a honeypot")
             else:
-                print("Found TCP port " + str(port) + " open")
-        return result == 0
+                print("The host has " + str(count) + " ports open. Based on this, it is unlikely that the host is a honeypot")
 
-    def test_UDP_port_open(self, port, protocol):
+    def full_TCP_scan(self):
         """
-        Tests if the host has a UDP port open.
-        :param port: The UDP port to be tested
-        :param protocol: The protocol that usually uses the port.
-        :return: True if the port is open, False otherwise.
+        Scans all TCP ports with NMAP.
         """
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(3)
-        result = s.connect_ex((self.host_address, port))
-        s.close()
-        if result == 0:
-            if protocol != "":
-                print("Found UDP port " + str(port) + " open: " + protocol + " protocol.")
-            else:
-                print("Found UDP port " + str(port) + " open")
-        return result == 0
+        cmd_TCP_10000 = "nmap -sT -p 1-10000 " + self.host_address
+        cmd_TCP_20000 = "nmap -sT -p 10000-20000 " + self.host_address
+        cmd_TCP_30000 = "nmap -sT -p 20000-30000 " + self.host_address
+        cmd_TCP_40000 = "nmap -sT -p 30000-40000 " + self.host_address
+        cmd_TCP_50000 = "nmap -sT -p 40000-50000 " + self.host_address
+        cmd_TCP_60000 = "nmap -sT -p 50000-60000 " + self.host_address
+        cmd_TCP_65535 = "nmap -sT -p 60000-65535 " + self.host_address
+        scan_results = []
+        print("Scanning all TCP ports on the host...    (this can take up to 5 minutes, or even time-out)")
+        scan_results.append(run(cmd_TCP_10000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning TCP ports 1-10000")
+        scan_results.append(run(cmd_TCP_20000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning TCP ports 10000-20000")
+        scan_results.append(run(cmd_TCP_30000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning TCP ports 20000-30000")
+        scan_results.append(run(cmd_TCP_40000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning TCP ports 30000-40000")
+        scan_results.append(run(cmd_TCP_50000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning TCP ports 40000-50000")
+        scan_results.append(run(cmd_TCP_60000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning TCP ports 50000-60000")
+        scan_results.append(run(cmd_TCP_65535, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning TCP ports 60000-65535\n")
+        for part in scan_results:
+            for line in str(part, "UTF-8").split("\n")[6:-2]:
+                if "/" in line:
+                    port = line.split("/")[0]
+                    self.open_ports["TCP-" + port] = True
+
+    def full_UDP_scan(self):
+        """
+        Scans all UDP ports with NMAP.
+        """
+        cmd_UDP_10000 = "nmap -sU -p 1-10000 " + self.host_address
+        cmd_UDP_20000 = "nmap -sU -p 10000-20000 " + self.host_address
+        cmd_UDP_30000 = "nmap -sU -p 20000-30000 " + self.host_address
+        cmd_UDP_40000 = "nmap -sU -p 30000-40000 " + self.host_address
+        cmd_UDP_50000 = "nmap -sU -p 40000-50000 " + self.host_address
+        cmd_UDP_60000 = "nmap -sU -p 50000-60000 " + self.host_address
+        cmd_UDP_65535 = "nmap -sU -p 60000-65535 " + self.host_address
+        scan_results = []
+        print("Scanning all UDP ports on the host...    (this can take up to 5 minutes or even time-out)")
+        scan_results.append(run(cmd_UDP_10000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning UDP ports 1-10000")
+        scan_results.append(run(cmd_UDP_20000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning UDP ports 10000-20000")
+        scan_results.append(run(cmd_UDP_30000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning UDP ports 20000-30000")
+        scan_results.append(run(cmd_UDP_40000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning UDP ports 30000-40000")
+        scan_results.append(run(cmd_UDP_50000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning UDP ports 40000-50000")
+        scan_results.append(run(cmd_UDP_60000, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning UDP ports 50000-60000")
+        scan_results.append(run(cmd_UDP_65535, shell=True, capture_output=True, timeout=120).stdout)
+        print("DONE scanning UDP ports 60000-65535\n")
+        for part in scan_results:
+            for line in str(part, "UTF-8").split("\n")[5:-2]:
+                if "/" in line:
+                    port = line.split("/")[0]
+                    self.open_ports["UDP-" + port] = True
+
+    def scan_only_ICS(self, udp_privileged):
+        """
+        Scans only the known ICS ports.
+        :param udp_privileged: Boolean indicating if the process is privileged to run NMAP in UDP mode.
+        """
+        for port in range(1, 65536):
+            tcp_port = "TCP-" + str(port)
+            udp_port = "UDP-" + str(port)
+            if self.is_ICS_port(tcp_port)[0]:
+                command = "nmap -sT -p " + str(port) + " " + self.host_address
+                result = run(command, shell=True, capture_output=True, timeout=120).stdout
+                for line in str(result, "UTF-8").split("\n")[5:-2]:
+                    if "/" in line:
+                        self.open_ports[tcp_port] = True
+            if self.is_ICS_port(udp_port)[0]:
+                if udp_privileged:
+                    command = "nmap -sU -p " + str(port) + " " + self.host_address
+                    result = run(command, shell=True, capture_output=True, timeout=120).stdout
+                    for line in str(result, "UTF-8").split("\n")[5:-2]:
+                        if "/" in line:
+                            self.open_ports[udp_port] = True
+                else:
+                    print("Could not test port UDP-" + str(port)
+                          + ". Re-run with root permissions to test protocols on UDP ports.")
+
+    def is_ICS_port(self, port):
+        """
+        Checks if a known ICS protocol uses a port.
+        :param port: The type-port combination to be checked.
+        :return: Tuple consisting of: True if the port is used by a know ICS protocol, False otherwise,
+         and the name of the protocol if True.
+        """
+        if port == "TCP-102":
+            return True, "S7"
+        elif port == "TCP-2404":
+            return True, "IEC104"
+        elif port == "UDP-623":
+            return True, "IPMI"
+        elif port == "TCP-502":
+            return True, "Modbus"
+        elif port == "UDP-47808":
+            return True, "Bacnet"
+        elif port == "TCP-10001":
+            return True, "ATG"
+        return False, ""
 
     def test_conpot(self):
         """
         Determines if the host is running Conpot based which signatures can be elicited.
         """
-        if not self.checked_ports:
-            self.check_ports()
         print("\nTesting if the host is a Conpot instance...")
 
         if "TCP-102" in self.open_ports:
@@ -141,11 +203,6 @@ class HoneypotDetector:
         else: modbus = False
         print("Found Modbus signature.") if modbus else None
 
-        if "TCP-10001" in self.open_ports:
-            try: gaspot = gaspot_atg.test(self.host_address)
-            except: gaspot = False
-        else: gaspot = False
-        print("Found Gaspot signature.") if gaspot else None
 
         if "UDP-47808" in self.open_ports:
             try: bacnet = conpot_bacnet.test(self.host_address)
@@ -162,9 +219,24 @@ class HoneypotDetector:
         print("Found DNP3 signature.") if dnp3pot else None
         if S7 or IEC104 or IPMI or modbus or gaspot or bacnet:
             print("The host is definitely a Conpot instance.")
-        elif dnp3pot:
-            print("The host is a DNP3pot instance.")
-        # else if ATG:
-        #     print("The host could be a Conpot instance.")
         else:
             print("Unlikely that the host is a Conpot instance.")
+    
+    def test_gaspot(self):
+        """
+        Determines if the host is running Gaspot based on which signatures can be elicited.
+        """
+
+        print("\nTesting if the host is a Gaspot instance...")
+
+        if "TCP-10001" in self.open_ports:
+            try: gaspot = gaspot_atg.test(self.host_address)
+            except: gaspot = False
+        else: gaspot = False
+
+        print("Found Gaspot signature.") if gaspot else None
+
+        if gaspot:
+            print("The host is definitely a Gaspot instance.")
+        else:
+            print("Unlikely that the host is a Gaspot instance.")
