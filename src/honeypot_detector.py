@@ -1,4 +1,3 @@
-import socket
 from subprocess import run
 import requests
 import conpot_S7
@@ -231,7 +230,6 @@ class HoneypotDetector:
         else: modbus = False
         print("Found Modbus signature.") if modbus else None
 
-
         if "UDP-47808" in self.open_ports:
             try: bacnet = conpot_bacnet.test(self.host_address)
             except: bacnet = False
@@ -245,7 +243,9 @@ class HoneypotDetector:
             except: dnp3pot = False
         else: dnp3pot = False
         print("Found DNP3 signature.") if dnp3pot else None
-        if S7 or IEC104 or IPMI or modbus or gaspot or bacnet:
+        
+
+        if S7 or IEC104 or IPMI or modbus or bacnet:
             print("The host is definitely a Conpot instance.")
         else:
             print("Unlikely that the host is a Conpot instance.")
@@ -254,17 +254,15 @@ class HoneypotDetector:
         """
         Determines if the host is running Gaspot based on which signatures can be elicited.
         """
-
         print("\nTesting if the host is a Gaspot instance...")
 
         if "TCP-10001" in self.open_ports:
-            try: gaspot = gaspot_atg.test(self.host_address)
-            except: gaspot = False
-        else: gaspot = False
+            try: atg = gaspot_atg.test(self.host_address)
+            except: atg = False
+        else: atg = False
+        print("Found ATG signature.") if atg else None
 
-        print("Found Gaspot signature.") if gaspot else None
-
-        if gaspot:
-            print("The host is definitely a Gaspot instance.")
+        if atg:
+            print("The host is definitely a Gaspot instance or Conpot with the guardian_ast template.")
         else:
             print("Unlikely that the host is a Gaspot instance.")
