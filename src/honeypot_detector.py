@@ -235,14 +235,6 @@ class HoneypotDetector:
             except: bacnet = False
         else: bacnet = False
         print("Found Bacnet signature.") if bacnet else None
-
-        print("\nTesting if the host is a DNP3pot instance...")
-
-        if "TCP-20000" in self.open_ports:
-            try: dnp3pot = dnp3pot_dnp3.test(self.host_address)
-            except: dnp3pot = False
-        else: dnp3pot = False
-        print("Found DNP3 signature.") if dnp3pot else None
         
 
         if S7 or IEC104 or IPMI or modbus or bacnet:
@@ -266,3 +258,20 @@ class HoneypotDetector:
             print("The host is definitely a Gaspot instance or Conpot with the guardian_ast template.")
         else:
             print("Unlikely that the host is a Gaspot instance.")
+
+    def test_dnp3pot(self):
+        """
+        Determines if the host is running DNP3Pot based on which signatures can be elicited.
+        """
+        print("\nTesting if the host is a DNP3pot instance...")
+
+        if "TCP-20000" in self.open_ports:
+            try: dnp3 = dnp3pot_dnp3.test(self.host_address)
+            except: dnp3 = False
+        else: dnp3 = False
+        print("Found DNP3 signature.") if dnp3 else None
+
+        if dnp3:
+            print("The host is definitely a DNP3Pot instance.")
+        else:
+            print("Unlikely that the host is a DNP3Pot instance.")
