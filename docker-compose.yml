@@ -27,4 +27,8 @@ services:
     ports:
       - "20000:20000"
 
-  
+  shape:
+    image: andreamalnatitu/shape-honeypot:latest
+    container_name: shape
+    ports:
+      - "102:102"
