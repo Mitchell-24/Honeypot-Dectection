@@ -9,6 +9,7 @@ import gaspot_atg
 import os
 import dnp3pot_dnp3
 import conpot_snmp
+import dicompot_DICOM
 
 class HoneypotDetector:
 
@@ -201,6 +202,8 @@ class HoneypotDetector:
             return True, "ATG"
         elif port == "UDP-16100":
             return True, "SNMP"
+        elif port == "TCP-11112":
+            return True, "DICOM"
         return False, ""
 
     def test_conpot(self):
@@ -283,3 +286,19 @@ class HoneypotDetector:
             print("The host is definitely a DNP3Pot instance.")
         else:
             print("Unlikely that the host is a DNP3Pot instance.")
+    
+    def test_dicompot(self):
+        """
+        Determines if the host is running DicomPot based on which signatures can be elicited.
+        """
+        print("\nTesting if the host is a DicomPot instance...")
+
+        if "TCP-11112" in self.open_ports:
+            try: dicom = dicompot_DICOM.test(self.host_address)
+            except: dicom = False
+        else: dicom = False
+
+        if dicom:
+            print("The host is definitely a DicomPot instance.")
+        else:
+            print("Unlikely that the host is a DicomPot instance.")
