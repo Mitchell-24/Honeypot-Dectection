@@ -10,6 +10,7 @@ import os
 import dnp3pot_dnp3
 import conpot_snmp
 import dicompot_DICOM
+import medpot_hl7
 
 class HoneypotDetector:
 
@@ -204,6 +205,8 @@ class HoneypotDetector:
             return True, "SNMP"
         elif port == "TCP-11112":
             return True, "DICOM"
+        elif port == "TCP-2575":
+            return True, "MedPot"
         return False, ""
 
     def test_conpot(self):
@@ -302,3 +305,20 @@ class HoneypotDetector:
             print("The host is definitely a DicomPot instance.")
         else:
             print("Unlikely that the host is a DicomPot instance.")
+            
+    def test_medpot(self):
+        """
+        Determines if the host is running a MedPot (HL7 honeypot) based on which signatures can be elicited.
+        """
+        print("\nTesting if the host is a MedPot instance...")
+
+        if "TCP-2575" in self.open_ports:
+            try: medpot = medpot_hl7.test(self.host_address)
+            except: medpot = False
+        else: medpot = False
+        print("Found MedPot signature.") if medpot else None
+
+        if medpot:
+            print("The host is definitely a MedPot instance.")
+        else:
+            print("Unlikely that the host is a MedPot instance.")
