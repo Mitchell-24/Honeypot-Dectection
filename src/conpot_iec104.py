@@ -3,13 +3,10 @@ import time
 import c104
 from conpot_iec104_helper import *
 
-def is_conpot(my_client):
-    cl_ct_count = len(my_client.connections)
+IMPL_CMD_TYPE = c104.Type.C_SC_NA_1
+NOT_IMPL_CMD_TYPE = c104.Type.C_SC_TA_1
 
-    if not cl_ct_count == 1:
-        return False
-
-    ct = my_client.connections[0]
+def check_config_sigs(ct: c104.Connection):
     ct_st_count = len(ct.stations)
 
     if not ct_st_count == 1:
@@ -26,7 +23,38 @@ def is_conpot(my_client):
     
     return True
 
+def check_impl_sigs(ct: c104.Connection):
+    for st in ct.stations:
 
+        cmd_implemented = st.add_point(2**24-1, IMPL_CMD_TYPE)
+        cmd_not_implemented = st.add_point(2**24-2, NOT_IMPL_CMD_TYPE)
+
+        cmd_implemented.transmit(c104.Cot.ACTIVATION)
+        cmd_not_implemented.transmit(c104.Cot.ACTIVATION)
+
+
+def parse_response_raw(connection: c104.Connection, data: bytes) -> None:
+
+    global has_impl_sigs
+
+    frame = c104.explain_bytes_dict(apdu=data)
+
+    if frame['format'] == 'I':
+        
+        # 1: conpot tends to set OA = 0
+        if frame['originatorAddress'] == 0:
+            
+            # 2: if we get response for implemented command,
+            # conpot detects it and sets the 'OA not found' flag
+
+            if frame['type'] == IMPL_CMD_TYPE and frame['cot'] == c104.Cot.UNKNOWN_IOA:
+                has_impl_sigs = True
+
+            # 3: if we get response for not implemented command,
+            # conpot cannot reply and this is not conpot after all
+            # ---BUT: OA = 2**24-1 endpoint could also exist in conpot and then this will also trigger! (neglect this possibility)---
+            elif frame['type'] == NOT_IMPL_CMD_TYPE:
+                has_impl_sigs = False
 
 def test(address):
     """
@@ -40,11 +68,13 @@ def test(address):
 
     my_client = c104.Client(tick_rate_ms=1000, command_timeout_ms=5000)
     my_client.originator_address = 123
-    cl_connection_1 = my_client.add_connection(ip=address, port=2404, init=c104.Init.ALL)
-
+    cl_connection_1 = my_client.add_connection(ip=address, port=2404, init=c104.Init.NONE)
+    #cl_connection_1.on_unexpected_message(callable=con_on_unexpected_message)
 
     ### Register callbacks to print connection info
     #register_callbacks(my_client, cl_connection_1)
+
+    cl_connection_1.on_receive_raw(parse_response_raw)
 
     my_client.start()
 
@@ -54,11 +84,20 @@ def test(address):
         time.sleep(1)
         counter += 1
 
-    conpot = is_conpot(my_client)
+    cl_connection_1.interrogation(0xFFFF)
+    
+    global has_impl_sigs
+    has_impl_sigs = False
+    check_impl_sigs(cl_connection_1)
+    
+    has_config_sigs = check_config_sigs(cl_connection_1)
 
     ### Dump all point data stored in the ICS system that hosts the server
     #cl_dump(my_client, cl_connection_1)
 
     my_client.stop()
 
-    return conpot
+    return has_impl_sigs or has_config_sigs
+
+if __name__ == "__main__":
+    test("localhost")
