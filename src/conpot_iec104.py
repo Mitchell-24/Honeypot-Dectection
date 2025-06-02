@@ -26,10 +26,13 @@ def check_config_sigs(ct: c104.Connection):
 def check_impl_sigs(ct: c104.Connection):
     for st in ct.stations:
 
+        # command requests at endpoints IA = 2**24-1 and IA = 2**24-2
+
         cmd_implemented = st.add_point(2**24-1, IMPL_CMD_TYPE)
         cmd_not_implemented = st.add_point(2**24-2, NOT_IMPL_CMD_TYPE)
 
         cmd_implemented.transmit(c104.Cot.ACTIVATION)
+        time.sleep(.2)
         cmd_not_implemented.transmit(c104.Cot.ACTIVATION)
 
 
@@ -41,19 +44,19 @@ def parse_response_raw(connection: c104.Connection, data: bytes) -> None:
 
     if frame['format'] == 'I':
         
-        # 1: conpot tends to set OA = 0
+        # 1: conpot tends to set OA = 0 in response
         if frame['originatorAddress'] == 0:
             
-            # 2: if we get response for implemented command,
-            # conpot detects it and sets the 'OA not found' flag
-
+            # 2: if we get response for the implemented command request at the endpoint
+            # with IA = 2**24-1, conpot detects it and sets the 'IA not found' flag
+            # NOTE: in theory real hosts could also act like this, but in practice I didnt find this with OA = 0
+            # NOTE: the IA = 2**24-1 endpoint could also exist in conpot and then this will fail!
             if frame['type'] == IMPL_CMD_TYPE and frame['cot'] == c104.Cot.UNKNOWN_IOA:
                 has_impl_sigs = True
 
             # 3: if we get response for not implemented command,
-            # conpot cannot reply and this is not conpot after all
-            # ---BUT: OA = 2**24-1 endpoint could also exist in conpot and then this will also trigger! (neglect this possibility)---
-            elif frame['type'] == NOT_IMPL_CMD_TYPE:
+            # this is not response from conpot (conpot does not reply in this case)
+            if frame['type'] == NOT_IMPL_CMD_TYPE:
                 has_impl_sigs = False
 
 def test(address):
