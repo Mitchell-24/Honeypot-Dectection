@@ -2,9 +2,22 @@ import functools
 import time
 import c104
 from conpot_iec104_helper import *
+import random
 
 IMPL_CMD_TYPE = c104.Type.C_SC_NA_1
 NOT_IMPL_CMD_TYPE = c104.Type.C_SC_TA_1
+
+def fetch_non_existing_endpoint(ct: c104.Connection):
+    epts_ads = []
+    for st in ct.stations:
+        for pt in st.points:
+            epts_ads.append(pt.io_address)
+    
+    r = epts_ads[0]
+    while r in epts_ads:
+        r = random.randint(0, 2**24-1)
+
+    return r
 
 def check_config_sigs(ct: c104.Connection):
     ct_st_count = len(ct.stations)
@@ -26,10 +39,15 @@ def check_config_sigs(ct: c104.Connection):
 def check_impl_sigs(ct: c104.Connection):
     for st in ct.stations:
 
-        # command requests at endpoints IA = 2**24-1 and IA = 2**24-2
+        # command requests at random endpoints
+        ia1 = fetch_non_existing_endpoint(ct)
+        ia2 = fetch_non_existing_endpoint(ct)
 
-        cmd_implemented = st.add_point(2**24-1, IMPL_CMD_TYPE)
-        cmd_not_implemented = st.add_point(2**24-2, NOT_IMPL_CMD_TYPE)
+        while ia1 == ia2:
+            ia2 = fetch_non_existing_endpoint(ct)
+
+        cmd_implemented = st.add_point(ia1, IMPL_CMD_TYPE)
+        cmd_not_implemented = st.add_point(ia2, NOT_IMPL_CMD_TYPE)
 
         cmd_implemented.transmit(c104.Cot.ACTIVATION)
         time.sleep(.2)
@@ -50,7 +68,6 @@ def parse_response_raw(connection: c104.Connection, data: bytes) -> None:
             # 2: if we get response for the implemented command request at the endpoint
             # with IA = 2**24-1, conpot detects it and sets the 'IA not found' flag
             # NOTE: in theory real hosts could also act like this, but in practice I didnt find this with OA = 0
-            # NOTE: the IA = 2**24-1 endpoint could also exist in conpot and then this will fail!
             if frame['type'] == IMPL_CMD_TYPE and frame['cot'] == c104.Cot.UNKNOWN_IOA:
                 has_impl_sigs = True
 
