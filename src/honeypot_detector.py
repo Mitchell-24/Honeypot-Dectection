@@ -213,10 +213,16 @@ class HoneypotDetector:
         print("\nTesting if the host is a Conpot instance...")
 
         if "TCP-102" in self.open_ports:
-            try: S7 = conpot_S7.test(self.host_address)
-            except: S7 = False
-        else: S7 = False
-        print("Found S7 signature.") if S7 else None
+            try: S7_conf = conpot_S7.test_configuration_signature(self.host_address)
+            except: S7_conf = False
+        else: S7_conf = False
+        print("Found S7 configuration signature.") if S7_conf else None
+
+        if "TCP-102" in self.open_ports:
+            try: S7_implementation = conpot_S7.test_implementation_signature(self.host_address)
+            except: S7_implementation = False
+        else: S7_implementation = False
+        print("Found S7 partial implementation signature.") if S7_implementation else None
 
         if "TCP-2404" in self.open_ports:
             try: IEC104 = conpot_iec104.test(self.host_address)
@@ -248,7 +254,7 @@ class HoneypotDetector:
         else: snmp = False
         print("Found SNMP signature.") if snmp else None
 
-        if S7 or IEC104 or IPMI or modbus or bacnet:
+        if S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet:
             print("The host is definitely a Conpot instance.")
         else:
             print("Unlikely that the host is a Conpot instance.")
