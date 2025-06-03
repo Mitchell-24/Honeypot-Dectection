@@ -7,6 +7,10 @@ import random
 IMPL_CMD_TYPE = c104.Type.C_SC_NA_1
 NOT_IMPL_CMD_TYPE = c104.Type.C_SC_TA_1
 
+CONPOT_INRO_TYPES = [c104.Type.M_SP_NA_1, c104.Type.M_DP_NA_1, c104.Type.M_ST_NA_1, 
+                     c104.Type.M_BO_NA_1, c104.Type.M_ME_NA_1, c104.Type.M_ME_NB_1, 
+                     c104.Type.M_ME_NC_1]
+
 def fetch_non_existing_endpoint(ct: c104.Connection):
     epts_ads = []
     for st in ct.stations:
@@ -76,6 +80,10 @@ def parse_response_raw(connection: c104.Connection, data: bytes) -> None:
             if frame['type'] == NOT_IMPL_CMD_TYPE:
                 has_impl_sigs = False
 
+            # 4: conpot is only capable of responding with certain types of endpoint
+            if frame['cot'] == c104.Cot.INTERROGATED_BY_STATION and frame['type'] not in CONPOT_INRO_TYPES:
+                has_impl_sigs = False
+
 def test(address):
     """
     Tests if the host has the Conpot IEC104 signature.
@@ -116,6 +124,8 @@ def test(address):
     #cl_dump(my_client, cl_connection_1)
 
     my_client.stop()
+
+    #print(has_impl_sigs)
 
     return has_impl_sigs or has_config_sigs
 

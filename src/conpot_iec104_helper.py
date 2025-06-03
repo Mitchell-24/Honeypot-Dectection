@@ -87,7 +87,7 @@ def register_callbacks(my_client, cl_connection_1):
     #                                                    custom_arg="extra argument with default/bounded value passes signature check"))
     #my_client.on_new_point(callable=cl_on_new_point)
 
-    #cl_connection_1.on_receive_raw(callable=cl_ct_on_receive_raw)
+    cl_connection_1.on_receive_raw(callable=cl_ct_on_receive_raw)
     cl_connection_1.on_send_raw(callable=cl_ct_on_send_raw)
 
 
