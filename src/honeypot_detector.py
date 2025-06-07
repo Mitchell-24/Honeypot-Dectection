@@ -335,6 +335,15 @@ class HoneypotDetector:
         Tests for all known signatures if the corresponding port is open.
         :return: A summary of the found signatures and possible honeypots.
         """
+        # First check if the host responds to a ping. Unlikely that it is online when no response, so we skip it.
+        ping = os.system("ping -c 1 " + self.host_address + " > /dev/null 2>&1")
+        if ping != 0:
+            return {
+                "Ping": False,
+                "Host": self.host_address,
+                "Ports": list(self.open_ports.keys()),
+            }
+
         signatures = []
         # Conpot signatures
         if "TCP-102" in self.open_ports:
@@ -408,6 +417,7 @@ class HoneypotDetector:
         if HL7: signatures.append("HL7")
 
         return {
+            "Ping": True,
             "Host": self.host_address,
             "Ports": list(self.open_ports.keys()),
             "Signatures": signatures,

@@ -40,7 +40,7 @@ class Censys_batch_processor:
         Starts the parallel processing of the Censys data.
         """
         # Calculate the number of threads and corresponding batch size based on the number of cores we have.
-        num_threads = multiprocessing.cpu_count() #TODO: *5
+        num_threads = multiprocessing.cpu_count() * 5
         batch_size = math.floor(len(self.hosts) / num_threads)
 
         # Create the batches
@@ -83,9 +83,9 @@ class Censys_batch_processor:
             detector.open_ports = host[1]
             results.append(detector.test_all())
 
-            # Save the results every n iterations.
+            # Save the results every 50 iterations.
             counter += 1
-            if counter == 3: # TODO: change number
+            if counter == 50:
                 file = open(chunk_file, "a")
                 for result in results:
                     file.write(json.dumps(result) + ",")
