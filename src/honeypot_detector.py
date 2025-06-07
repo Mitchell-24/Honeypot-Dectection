@@ -257,7 +257,7 @@ class HoneypotDetector:
         else: snmp = False
         print("Found SNMP signature.") if snmp else None
 
-        if S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet:
+        if S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet or snmp:
             print("The host is definitely a Conpot instance.")
         else:
             print("Unlikely that the host is a Conpot instance.")
@@ -319,12 +319,103 @@ class HoneypotDetector:
         print("\nTesting if the host is a MedPot instance...")
 
         if "TCP-2575" in self.open_ports:
-            try: medpot = medpot_hl7.test(self.host_address)
-            except: medpot = False
-        else: medpot = False
-        print("Found MedPot signature.") if medpot else None
+            try: HL7 = medpot_hl7.test(self.host_address)
+            except: HL7 = False
+        else: HL7 = False
+        print("Found HL7 signature.") if HL7 else None
 
-        if medpot:
+        if HL7:
             print("The host is definitely a MedPot instance.")
         else:
             print("Unlikely that the host is a MedPot instance.")
+
+
+    def test_all(self):
+        """
+        Tests for all known signatures if the corresponding port is open.
+        :return: A summary of the found signatures and possible honeypots.
+        """
+        signatures = []
+        # Conpot signatures
+        if "TCP-102" in self.open_ports:
+            try: S7_conf = conpot_S7.test_configuration_signature(self.host_address)
+            except: S7_conf = False
+        else: S7_conf = False
+        if S7_conf: signatures.append("S7-1")
+
+        if "TCP-102" in self.open_ports:
+            try: S7_implementation = conpot_S7.test_implementation_signature(self.host_address)
+            except: S7_implementation = False
+        else: S7_implementation = False
+        if S7_implementation: signatures.append("S7-2")
+
+        if "TCP-2404" in self.open_ports:
+            try: IEC104 = conpot_iec104.test(self.host_address)
+            except: IEC104 = False
+        else: IEC104 = False
+        if IEC104: signatures.append("IEC104")
+
+        if "UDP-623" in self.open_ports:
+            try: IPMI = conpot_ipmi.test(self.host_address)
+            except: IPMI = False
+        else: IPMI = False
+        if IPMI: signatures.append("IPMI")
+
+        if "TCP-502" in self.open_ports:
+            try: modbus = conpot_modbus.test(self.host_address)
+            except: modbus = False
+        else: modbus = False
+        if modbus: signatures.append("Modbus")
+
+        if "UDP-47808" in self.open_ports:
+            try: bacnet = conpot_bacnet.test(self.host_address)
+            except: bacnet = False
+        else: bacnet = False
+        if bacnet: signatures.append("Bacnet")
+
+        if "UDP-16100" in self.open_ports:
+            try: snmp = conpot_snmp.test(self.host_address)
+            except: snmp = False
+        else: snmp = False
+        if snmp: signatures.append("SNMP")
+
+        # Gaspot signature
+        if "TCP-10001" in self.open_ports:
+            try: atg = gaspot_atg.test(self.host_address)
+            except: atg = False
+        else: atg = False
+        if atg: signatures.append("ATG")
+
+        # DNP3Pot signature
+        if "TCP-20000" in self.open_ports:
+            try: dnp3 = dnp3pot_dnp3.test(self.host_address)
+            except: dnp3 = False
+        else: dnp3 = False
+        if dnp3: signatures.append("DNP3")
+
+        # Dicompot signature
+        if "TCP-11112" in self.open_ports:
+            try: dicom = dicompot_DICOM.test(self.host_address)
+            except: dicom = False
+        else: dicom = False
+        if dicom: signatures.append("Dicom")
+
+        # Medpot signature
+        if "TCP-2575" in self.open_ports:
+            try: HL7 = medpot_hl7.test(self.host_address)
+            except: HL7 = False
+        else: HL7 = False
+        if HL7: signatures.append("HL7")
+
+        return {
+            "Host": self.host_address,
+            "Ports": list(self.open_ports.keys()),
+            "Signatures": signatures,
+            "Honeypots": {
+                "Conpot": S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet or snmp,
+                "Gaspot": atg,
+                "DNP3Pot": dnp3,
+                "Dicompot": dicom,
+                "Medpot": HL7
+            }
+        }

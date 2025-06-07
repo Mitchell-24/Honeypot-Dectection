@@ -1,10 +1,17 @@
 import honeypot_detector
 import sys
 
+import censys_batch_processor
+
 if len(sys.argv) < 2:
     print("Please provide the address of the host as an argument.")
     sys.exit(1)
 ip_address = sys.argv[-1]
+
+if sys.argv[1] == "-b":
+    batch_processor = censys_batch_processor.Censys_batch_processor(sys.argv[-1])
+    batch_processor.start()
+    sys.exit(0)
 
 full_scan = False
 if sys.argv[1] == "-s":
