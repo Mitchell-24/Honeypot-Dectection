@@ -8,7 +8,8 @@ if len(sys.argv) < 2:
     sys.exit(1)
 ip_address = sys.argv[-1]
 
-if sys.argv[1] == "-b":
+# Process Censys data
+if sys.argv[1] == "-c":
     batch_processor = censys_batch_processor.Censys_batch_processor(sys.argv[-1])
     batch_processor.start()
     sys.exit(0)
