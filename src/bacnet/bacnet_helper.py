@@ -96,15 +96,15 @@ def discover_bacnet(ip, port=47808):
     try:
         resp, _ = sock.recvfrom(1024)
     except socket.timeout:
-        print("No response, not a BACnet device or filtered.")
+        # print("No response, not a BACnet device or filtered.")
         return
     if resp[0] != 0x81:
-        print("Not a BACnet device.")
+        # print("Not a BACnet device.")
         return
     result = {}
     if resp[6] == 0x50:
-        print("BACnet ADPU Type: Error (5)")
-        print(resp.hex())
+        # print("BACnet ADPU Type: Error (5)")
+        # print(resp.hex())
         return
     # Instance Number (object number)
     instance = int.from_bytes(resp[19:22], byteorder='big')
