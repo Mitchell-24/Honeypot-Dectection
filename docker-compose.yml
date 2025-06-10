@@ -26,5 +26,3 @@ services:
     container_name: dnp3pot
     ports:
       - "20000:20000"
-
-  

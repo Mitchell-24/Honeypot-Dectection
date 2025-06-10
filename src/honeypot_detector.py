@@ -6,6 +6,7 @@ import conpot_iec104
 import conpot_ipmi
 import conpot_modbus
 import gaspot_atg
+import conpot_enip
 import os
 import dnp3pot_dnp3
 import conpot_snmp
@@ -201,6 +202,8 @@ class HoneypotDetector:
             return True, "Bacnet"
         elif port == "TCP-10001":
             return True, "ATG"
+        elif port == "TCP-44818":
+            return True, "ENIP"
         elif port == "UDP-16100":
             return True, "SNMP"
         elif port == "TCP-11112":
@@ -251,13 +254,19 @@ class HoneypotDetector:
         else: bacnet = False
         print("Found Bacnet signature.") if bacnet else None
 
+        if "TCP-44818" in self.open_ports:
+            try: enip = conpot_enip.test(self.host_address)
+            except: enip = False
+        else: enip = False
+        print("Found ENIP signature.") if enip else None
+        
         if "UDP-16100" in self.open_ports:
             try: snmp = conpot_snmp.test(self.host_address)
             except: snmp = False
         else: snmp = False
         print("Found SNMP signature.") if snmp else None
 
-        if S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet or snmp:
+        if S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet or snmp or enip:
             print("The host is definitely a Conpot instance.")
         else:
             print("Unlikely that the host is a Conpot instance.")
