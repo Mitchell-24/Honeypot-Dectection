@@ -27,6 +27,16 @@ Run `main.py [Host-Address]` . The host address is `localhost` if you run the ho
 
 You can add a new signature by creating a new python file with the name `honeypot_protocol`. Make sure the file has a function `test(address)` which returns True if the signature can be elicited from the host, and False otherwise. Make sure it does not print anything and does not get stuck.
 
+### Censys data
+
+The Honeypot Detector can be run on a list of hosts retrieved from Censys. This is done by using the `-c` option and passing the program the data as a JSON file: 
+
+```bash
+python src/main.py -c [path/to/data.json]
+```
+
+The results will be written into the new `./output` directory.
+
 ### IPInfo
 
 The program uses the IPInfo.io API to gather additional information about target hosts, including:
@@ -40,6 +50,7 @@ The program uses the IPInfo.io API to gather additional information about target
 To get the most out of IPInfo and avoid rate limiting:
 
 1. Sign up for an API key at [ipinfo.io](https://ipinfo.io)
+
 2. Set the environment variable before running:
    
    ```bash
