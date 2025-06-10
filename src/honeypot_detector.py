@@ -1,6 +1,5 @@
-import socket
 from subprocess import run
-
+import requests
 import conpot_S7
 import conpot_bacnet
 import conpot_iec104
@@ -8,6 +7,11 @@ import conpot_ipmi
 import conpot_modbus
 import gaspot_atg
 import conpot_enip
+import os
+import dnp3pot_dnp3
+import conpot_snmp
+import dicompot_DICOM
+import medpot_hl7
 
 class HoneypotDetector:
 
@@ -20,12 +24,40 @@ class HoneypotDetector:
         self.open_ports = {}
         self.checked_ports = False
 
+    def get_host_info(self):
+        """
+        Retrieves and displays information about the target host using IPInfo.io API.
+        Uses bearer token authentication if IPINFO_API_KEY environment variable is set.
+        """
+        api_key = os.getenv('IPINFO_API_KEY')
+        if not api_key:
+            print("Warning: IPINFO_API_KEY environment variable not found. API requests may be throttled.")
+            response = requests.get(f"https://ipinfo.io/{self.host_address}/json")
+        else:
+            headers = {'Authorization': f'Bearer {api_key}'}
+            response = requests.get(f"https://ipinfo.io/{self.host_address}/json", headers=headers)
+        data = response.json()
+        
+        print("\nTarget Host Information:")
+        if 'hostname' in data:
+            print(f"Hostname: {data['hostname']}")
+        print(f"City: {data.get('city', 'Unknown')}")
+        print(f"Region: {data.get('region', 'Unknown')}")
+        print(f"Country: {data.get('country', 'Unknown')}")
+        print(f"Organization: {data.get('org', 'Unknown')}")
+        print(f"Timezone: {data.get('timezone', 'Unknown')}\n")
+
+        return data
+
     def scan_ports(self, full_scan=False):
         """
         Scans TCP + UDP ports on the host to check if they are open.
         If full scan is set to True, will scan all ports
          and print if the host is a honeypot based on the number of open ports.
         """
+        # Get information about the target host
+        self.get_host_info()
+
         udp_test = run("nmap -sU -p 1 localhost", shell=True, capture_output=True, timeout=120).stdout
         udp_privileged = len(udp_test) != 0
 
@@ -172,6 +204,12 @@ class HoneypotDetector:
             return True, "ATG"
         elif port == "TCP-44818":
             return True, "ENIP"
+        elif port == "UDP-16100":
+            return True, "SNMP"
+        elif port == "TCP-11112":
+            return True, "DICOM"
+        elif port == "TCP-2575":
+            return True, "MedPot"
         return False, ""
 
     def test_conpot(self):
@@ -181,10 +219,16 @@ class HoneypotDetector:
         print("\nTesting if the host is a Conpot instance...")
 
         if "TCP-102" in self.open_ports:
-            try: S7 = conpot_S7.test(self.host_address)
-            except: S7 = False
-        else: S7 = False
-        print("Found S7 signature.") if S7 else None
+            try: S7_conf = conpot_S7.test_configuration_signature(self.host_address)
+            except: S7_conf = False
+        else: S7_conf = False
+        print("Found S7 configuration signature.") if S7_conf else None
+
+        if "TCP-102" in self.open_ports:
+            try: S7_implementation = conpot_S7.test_implementation_signature(self.host_address)
+            except: S7_implementation = False
+        else: S7_implementation = False
+        print("Found S7 partial implementation signature.") if S7_implementation else None
 
         if "TCP-2404" in self.open_ports:
             try: IEC104 = conpot_iec104.test(self.host_address)
@@ -215,8 +259,14 @@ class HoneypotDetector:
             except: enip = False
         else: enip = False
         print("Found ENIP signature.") if enip else None
+        
+        if "UDP-16100" in self.open_ports:
+            try: snmp = conpot_snmp.test(self.host_address)
+            except: snmp = False
+        else: snmp = False
+        print("Found SNMP signature.") if snmp else None
 
-        if S7 or IEC104 or IPMI or modbus  or bacnet or enip:
+        if S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet or snmp or enip:
             print("The host is definitely a Conpot instance.")
         else:
             print("Unlikely that the host is a Conpot instance.")
@@ -225,17 +275,166 @@ class HoneypotDetector:
         """
         Determines if the host is running Gaspot based on which signatures can be elicited.
         """
-
         print("\nTesting if the host is a Gaspot instance...")
 
         if "TCP-10001" in self.open_ports:
-            try: gaspot = gaspot_atg.test(self.host_address)
-            except: gaspot = False
-        else: gaspot = False
+            try: atg = gaspot_atg.test(self.host_address)
+            except: atg = False
+        else: atg = False
+        print("Found ATG signature.") if atg else None
 
-        print("Found Gaspot signature.") if gaspot else None
-
-        if gaspot:
-            print("The host is definitely a Gaspot instance.")
+        if atg:
+            print("The host is definitely a Gaspot instance or Conpot with the guardian_ast template.")
         else:
             print("Unlikely that the host is a Gaspot instance.")
+
+    def test_dnp3pot(self):
+        """
+        Determines if the host is running DNP3Pot based on which signatures can be elicited.
+        """
+        print("\nTesting if the host is a DNP3pot instance...")
+
+        if "TCP-20000" in self.open_ports:
+            try: dnp3 = dnp3pot_dnp3.test(self.host_address)
+            except: dnp3 = False
+        else: dnp3 = False
+        print("Found DNP3 signature.") if dnp3 else None
+
+        if dnp3:
+            print("The host is definitely a DNP3Pot instance.")
+        else:
+            print("Unlikely that the host is a DNP3Pot instance.")
+    
+    def test_dicompot(self):
+        """
+        Determines if the host is running DicomPot based on which signatures can be elicited.
+        """
+        print("\nTesting if the host is a DicomPot instance...")
+
+        if "TCP-11112" in self.open_ports:
+            try: dicom = dicompot_DICOM.test(self.host_address)
+            except: dicom = False
+        else: dicom = False
+
+        if dicom:
+            print("The host is definitely a DicomPot instance.")
+        else:
+            print("Unlikely that the host is a DicomPot instance.")
+            
+    def test_medpot(self):
+        """
+        Determines if the host is running a MedPot (HL7 honeypot) based on which signatures can be elicited.
+        """
+        print("\nTesting if the host is a MedPot instance...")
+
+        if "TCP-2575" in self.open_ports:
+            try: HL7 = medpot_hl7.test(self.host_address)
+            except: HL7 = False
+        else: HL7 = False
+        print("Found HL7 signature.") if HL7 else None
+
+        if HL7:
+            print("The host is definitely a MedPot instance.")
+        else:
+            print("Unlikely that the host is a MedPot instance.")
+
+
+    def test_all(self):
+        """
+        Tests for all known signatures if the corresponding port is open.
+        :return: A summary of the found signatures and possible honeypots.
+        """
+        # First check if the host responds to a ping. Unlikely that it is online when no response, so we skip it.
+        ping = os.system("ping -c 1 " + self.host_address + " > /dev/null 2>&1")
+        if ping != 0:
+            return {
+                "Ping": False,
+                "Host": self.host_address,
+                "Ports": list(self.open_ports.keys()),
+            }
+
+        signatures = []
+        # Conpot signatures
+        if "TCP-102" in self.open_ports:
+            try: S7_conf = conpot_S7.test_configuration_signature(self.host_address)
+            except: S7_conf = False
+        else: S7_conf = False
+        if S7_conf: signatures.append("S7-1")
+
+        if "TCP-102" in self.open_ports:
+            try: S7_implementation = conpot_S7.test_implementation_signature(self.host_address)
+            except: S7_implementation = False
+        else: S7_implementation = False
+        if S7_implementation: signatures.append("S7-2")
+
+        if "TCP-2404" in self.open_ports:
+            try: IEC104 = conpot_iec104.test(self.host_address)
+            except: IEC104 = False
+        else: IEC104 = False
+        if IEC104: signatures.append("IEC104")
+
+        if "UDP-623" in self.open_ports:
+            try: IPMI = conpot_ipmi.test(self.host_address)
+            except: IPMI = False
+        else: IPMI = False
+        if IPMI: signatures.append("IPMI")
+
+        if "TCP-502" in self.open_ports:
+            try: modbus = conpot_modbus.test(self.host_address)
+            except: modbus = False
+        else: modbus = False
+        if modbus: signatures.append("Modbus")
+
+        if "UDP-47808" in self.open_ports:
+            try: bacnet = conpot_bacnet.test(self.host_address)
+            except: bacnet = False
+        else: bacnet = False
+        if bacnet: signatures.append("Bacnet")
+
+        if "UDP-16100" in self.open_ports:
+            try: snmp = conpot_snmp.test(self.host_address)
+            except: snmp = False
+        else: snmp = False
+        if snmp: signatures.append("SNMP")
+
+        # Gaspot signature
+        if "TCP-10001" in self.open_ports:
+            try: atg = gaspot_atg.test(self.host_address)
+            except: atg = False
+        else: atg = False
+        if atg: signatures.append("ATG")
+
+        # DNP3Pot signature
+        if "TCP-20000" in self.open_ports:
+            try: dnp3 = dnp3pot_dnp3.test(self.host_address)
+            except: dnp3 = False
+        else: dnp3 = False
+        if dnp3: signatures.append("DNP3")
+
+        # Dicompot signature
+        if "TCP-11112" in self.open_ports:
+            try: dicom = dicompot_DICOM.test(self.host_address)
+            except: dicom = False
+        else: dicom = False
+        if dicom: signatures.append("Dicom")
+
+        # Medpot signature
+        if "TCP-2575" in self.open_ports:
+            try: HL7 = medpot_hl7.test(self.host_address)
+            except: HL7 = False
+        else: HL7 = False
+        if HL7: signatures.append("HL7")
+
+        return {
+            "Ping": True,
+            "Host": self.host_address,
+            "Ports": list(self.open_ports.keys()),
+            "Signatures": signatures,
+            "Honeypots": {
+                "Conpot": S7_conf or S7_implementation or IEC104 or IPMI or modbus or bacnet or snmp,
+                "Gaspot": atg,
+                "DNP3Pot": dnp3,
+                "Dicompot": dicom,
+                "Medpot": HL7
+            }
+        }

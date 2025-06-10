@@ -14,10 +14,10 @@ def test(address):
         if data:
             return False
         else:
-            print("Modbus signature found.")
+            #print("Modbus signature found.")
             return True
     except socket.error as e:
-        print(f"Socket error: {e}")
+        #print(f"Socket error: {e}")
         return False
     finally:
         s.close()

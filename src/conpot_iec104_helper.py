@@ -81,11 +81,22 @@ def cl_dump(my_client, cl_connection_1):
 
 def register_callbacks(my_client, cl_connection_1):
 
-    cl_connection_1.on_state_change(callable=cl_ct_on_state_change)
+    #cl_connection_1.on_state_change(callable=cl_ct_on_state_change)
 
-    my_client.on_new_station(callable=functools.partial(cl_on_new_station,
-                                                        custom_arg="extra argument with default/bounded value passes signature check"))
-    my_client.on_new_point(callable=cl_on_new_point)
+    #my_client.on_new_station(callable=functools.partial(cl_on_new_station,
+    #                                                    custom_arg="extra argument with default/bounded value passes signature check"))
+    #my_client.on_new_point(callable=cl_on_new_point)
 
     cl_connection_1.on_receive_raw(callable=cl_ct_on_receive_raw)
     cl_connection_1.on_send_raw(callable=cl_ct_on_send_raw)
+
+
+def con_on_unexpected_message(connection: c104.Connection, message: c104.IncomingMessage, cause: c104.Umc) -> None:
+    if cause == c104.Umc.MISMATCHED_TYPE_ID :
+        station = connection.get_station(message.common_address)
+        if station:
+            point = station.get_point(message.io_address)
+            if point:
+                print("CL] <-in-- CONFLICT | SERVER CA {0} reports IOA {1} type as {2}, but is already registered as {3}".format(message.common_address, message.io_address, message.type, point.type))
+                return
+    print("CL] <-in-- REJECTED | {1} from SERVER CA {0}".format(message.common_address, cause))

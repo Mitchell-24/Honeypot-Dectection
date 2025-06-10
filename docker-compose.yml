@@ -1,7 +1,6 @@
 version: "3.7"
 services:
   conpot:
-    container_name: conpot
     image: yamchah2/conpot:bacnet_fix
     ports:
       - "80:8800" #SCADA UI, http
@@ -15,19 +14,15 @@ services:
       - "44818:44818" #EN/IP
       - "2404:2404" #IEC104, not in default template
     restart: always
-    networks:
-      - honeynet
   
   gaspot:
     image: rosesecurity/gaspot:v0.1.1
     container_name: gaspot
     ports:
       - "10001:10001"
-    networks:
-      - honeynet
 
-networks:
-  honeynet:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: honeynet
+  dnp3pot:
+    image: andreamalnatitu/dn3pot:latest
+    container_name: dnp3pot
+    ports:
+      - "20000:20000"

@@ -53,14 +53,12 @@ def test(address):
         s = socket.socket()
         s.settimeout(TIMEOUT)
         s.connect((address, PORT))
-        print(f"[+] Connected to {address}:{PORT}")
 
         all_commands = KNOWN_COMMANDS + UNKNOWN_COMMANDS
         matched_signatures = 0
         responses = []
 
         for cmd in all_commands:
-            print(f"[*] Sending command: {cmd}")
             s.send(cmd)
             time.sleep(0.05)  
             data = receive_full_response(s)
@@ -74,13 +72,9 @@ def test(address):
 
         s.close()
 
-        print(f"\n[✓] Completed scan. Matched signatures: {matched_signatures}")
         for cmd, resp in responses:
             clean_resp = resp.decode("utf-8", errors="ignore").replace("\n", "\\n")
-            print(f"↪ Command: {cmd} → Response: {clean_resp[:50]}")
-
         return matched_signatures > 0
 
     except Exception as e:
-        print(f"[!] Error: {e}")
         return False
