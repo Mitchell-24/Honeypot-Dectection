@@ -10,7 +10,7 @@ def test_configuration_signature(address):
    """
     port = 102
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(5)
+    s.settimeout(3)
     s.connect((address, port))
 
     # Handshake part 1.
@@ -44,7 +44,7 @@ def test_implementation_signature(address):
    """
     port = 102
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(5)
+    s.settimeout(3)
     s.connect((address, port))
 
     # Handshake part 1.

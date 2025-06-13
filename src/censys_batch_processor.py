@@ -6,7 +6,7 @@ import multiprocessing
 import os
 import random
 import time
-
+import signal
 import honeypot_detector
 
 
@@ -69,6 +69,10 @@ class Censys_batch_processor:
         result_file.seek(result_file.tell() - 1, os.SEEK_SET)
         result_file.write("]")
 
+    def timeout(signum, frame):
+        raise Exception("Time out exception")
+
+
     def process_batch(self, batch, chunk_id):
         """
         Processes one batch by using the HoneypotDetector on each host and periodically saving the results.
@@ -81,7 +85,9 @@ class Censys_batch_processor:
         for host in batch:
             detector = honeypot_detector.HoneypotDetector(host[0])
             detector.open_ports = host[1]
-            results.append(detector.test_all())
+
+            
+            results.append(detector._test_one())
 
             # Save the results every 50 iterations.
             counter += 1

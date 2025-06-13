@@ -2,7 +2,7 @@ import socket
 import time
 
 PORT = 10001
-TIMEOUT = 30
+TIMEOUT = 3
 
 
 KNOWN_COMMANDS = [

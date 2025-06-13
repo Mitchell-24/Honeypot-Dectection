@@ -19,6 +19,7 @@ if sys.argv[1] == "-s":
     full_scan = True
 
 detector = honeypot_detector.HoneypotDetector(ip_address)
+
 detector.scan_ports(full_scan=full_scan)
 detector.test_conpot()
 detector.test_gaspot()
